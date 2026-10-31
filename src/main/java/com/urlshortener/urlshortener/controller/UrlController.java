@@ -25,7 +25,7 @@ public class UrlController {
 
     @PostMapping("/api/urls")
     public ResponseEntity<UrlResponse> create(@Valid @RequestBody CreateUrlRequest request) {
-        UrlResponse response = urlService.createShortUrl(request.longUrl());
+        UrlResponse response = urlService.createShortUrl(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

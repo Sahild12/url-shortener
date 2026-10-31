@@ -2,6 +2,7 @@ package com.urlshortener.urlshortener.service;
 
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.urlshortener.urlshortener.dto.CreateUrlRequest;
 import com.urlshortener.urlshortener.dto.UrlResponse;
 import com.urlshortener.urlshortener.entity.Url;
 import com.urlshortener.urlshortener.repository.UrlRepository;
@@ -20,22 +22,37 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UrlService {
 
+    private static final Set<String> RESERVED = Set.of("api", "admin", "login", "health");
+
     private final UrlRepository urlRepository;
 
     @Value("${app.base-url}")
     private String baseUrl;
 
     @Transactional
-    public UrlResponse createShortUrl(String longUrl) {
-        validate(longUrl);
+    public UrlResponse createShortUrl(CreateUrlRequest request) {
+        validate(request.longUrl());
 
         Url url = new Url();
-        url.setLongUrl(longUrl);
+        url.setLongUrl(request.longUrl());
         url.setCreatedAt(LocalDateTime.now());
-        url = urlRepository.save(url);          // database generates the id
 
-        url.setShortCode(Base62.encode(url.getId()));
-        url = urlRepository.save(url);          // save the short code
+        if (request.expiryDays() != null) {
+            url.setExpiresAt(LocalDateTime.now().plusDays(request.expiryDays()));
+        }
+
+        String alias = request.customAlias();
+        if (alias != null) {
+            if (RESERVED.contains(alias.toLowerCase()) || urlRepository.existsByShortCode(alias)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Alias already taken");
+            }
+            url.setShortCode(alias);
+            url = urlRepository.save(url);
+        } else {
+            url = urlRepository.save(url);                    // get the id
+            url.setShortCode(Base62.encode(url.getId()));     // id -> code
+            url = urlRepository.save(url);
+        }
 
         return new UrlResponse(
                 url.getShortCode(),
