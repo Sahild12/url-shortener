@@ -1,10 +1,12 @@
 package com.urlshortener.urlshortener.service;
 
-import java.net.URI;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.Set;
-
+import com.urlshortener.urlshortener.dto.CreateUrlRequest;
+import com.urlshortener.urlshortener.dto.UrlResponse;
+import com.urlshortener.urlshortener.entity.Url;
+import com.urlshortener.urlshortener.util.Base62;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
@@ -12,14 +14,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.urlshortener.urlshortener.dto.CreateUrlRequest;
-import com.urlshortener.urlshortener.dto.UrlResponse;
-import com.urlshortener.urlshortener.entity.Url;
-import com.urlshortener.urlshortener.repository.UrlRepository;
-import com.urlshortener.urlshortener.util.Base62;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.net.URI;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -30,7 +29,7 @@ public class UrlService {
     private static final String CACHE_PREFIX = "url:";
     private static final Duration DEFAULT_TTL = Duration.ofHours(24);
 
-    private final UrlRepository urlRepository;
+    private final EntityManager entityManager;
     private final StringRedisTemplate redisTemplate;
 
     @Value("${app.base-url}")
@@ -50,15 +49,15 @@ public class UrlService {
 
         String alias = request.customAlias();
         if (alias != null) {
-            if (RESERVED.contains(alias.toLowerCase()) || urlRepository.existsByShortCode(alias)) {
+            if (RESERVED.contains(alias.toLowerCase()) || existsByShortCode(alias)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Alias already taken");
             }
             url.setShortCode(alias);
-            url = urlRepository.save(url);
+            url = save(url);
         } else {
-            url = urlRepository.save(url);
+            url = save(url);
             url.setShortCode(Base62.encode(url.getId()));
-            url = urlRepository.save(url);
+            url = save(url);
         }
 
         return new UrlResponse(
@@ -77,7 +76,7 @@ public class UrlService {
         }
 
         log.info("CACHE MISS -> {} (reading database)", shortCode);
-        Url url = urlRepository.findByShortCode(shortCode)
+        Url url = findByShortCode(shortCode)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Short URL not found"));
 
@@ -96,6 +95,33 @@ public class UrlService {
             log.warn("Redis unavailable, falling back to database: {}", e.getMessage());
             return null;
         }
+    }
+
+    private boolean existsByShortCode(String shortCode) {
+        Long count = entityManager.createQuery(
+                        "select count(u) from Url u where u.shortCode = :shortCode", Long.class)
+                .setParameter("shortCode", shortCode)
+                .getSingleResult();
+        return count > 0;
+    }
+
+    private Optional<Url> findByShortCode(String shortCode) {
+        return entityManager.createQuery(
+                        "select u from Url u where u.shortCode = :shortCode", Url.class)
+                .setParameter("shortCode", shortCode)
+                .getResultStream()
+                .findFirst();
+    }
+
+    private Url save(Url url) {
+        if (url.getId() == null) {
+            entityManager.persist(url);
+            entityManager.flush();
+            return url;
+        }
+        Url saved = entityManager.merge(url);
+        entityManager.flush();
+        return saved;
     }
 
     private void writeCache(String key, Url url) {
@@ -127,4 +153,3 @@ public class UrlService {
         }
     }
 }
- 
