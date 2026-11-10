@@ -95,7 +95,7 @@ POST /api/urls
 ```
 
 ## Screenshots
-![Create link](./src/main/resources/docs/url.png.png)
+![Create link](./src/main/resources/docs/url.png)
 ![Stats](./src/main/resources/docs/Table.png)
 ![Cache hit](./src/main/resources/docs/cache.png)
 ![Rate limit](./src/main/resources/docs/RateLimit.png)
