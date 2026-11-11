@@ -2,7 +2,7 @@
 
 A URL shortener designed like a real system: fast cached redirects, background click analytics, and rate limiting.
 
-**Live demo:** YOUR_LIVE_LINK (add after deployment)
+**Live demo:** https://url-shortener-k4rf.onrender.com 
 
 ## Features
 - Create short links with optional **custom alias** and **expiry date**
@@ -81,7 +81,7 @@ POST /api/urls
 2. Set your database password as an environment variable:
    ```
    # Windows (PowerShell), then reopen the terminal
-   setx DB_PASSWORD "your-password"
+   setx DB_PASSWORD "NewPass@123"
    ```
 3. Start MySQL and Redis, then run:
    ```
