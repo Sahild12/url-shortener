@@ -4,129 +4,126 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>URL Shortener</title>
+<link rel="icon" href="data:,">
 <style>
+  *, *::before, *::after { box-sizing: border-box; }
 
-  body { 
-    font-family: system-ui,
-    Arial, sans-serif; 
-    max-width: 640px; 
-    margin: 40px auto;
-    padding: 0 16px;
-    color: #1a1a1a; 
-    background: #f6f7f9; 
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --muted: #555;
+    --border: #cccccc;
+    --primary: #2563eb;
+    --ok-bg: #e7f8ee;
+    --ok-text: #14532d;
+    --err-bg: #fde8e8;
+    --err-text: #7f1d1d;
+    --line: #eeeeee;
   }
 
-
-  h1 { 
-    margin-bottom: 4px; 
-  }
-  
-  .sub { 
-    color: #555; 
-    margin-top: 0; 
-  }
-  
-  .card { 
-    background: #fff; 
-    border-radius: 10px; 
-    padding: 20px; 
-    margin: 20px 0; 
-    box-shadow: 0 1px 4px rgba(0,0,0,.1); 
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111827;
+      --card: #1f2937;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --border: #4b5563;
+      --primary: #3b82f6;
+      --ok-bg: #064e3b;
+      --ok-text: #d1fae5;
+      --err-bg: #7f1d1d;
+      --err-text: #fee2e2;
+      --line: #374151;
+    }
   }
 
-  label { 
-    display: block; 
-    font-size: 14px; 
-    margin: 12px 0 4px; 
+  body {
+    font-family: system-ui, Arial, sans-serif;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.4;
   }
 
-  input { 
-    width: 100%; 
-    padding: 10px; 
-    border: 1px solid #ccc; 
-    border-radius: 6px; 
-    font-size: 15px; 
-    box-sizing: border-box; 
+  h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  h3 { margin-top: 0; }
+  .sub { color: var(--muted); margin-top: 0; }
+
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 18px;
+    margin: 18px 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .12);
   }
 
-  .row { 
-    display: flex; 
-    gap: 12px; 
+  label { display: block; font-size: 14px; margin: 12px 0 6px; }
+
+  input {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 16px;
+    background: var(--card);
+    color: var(--text);
   }
 
-  .row > div { 
-    flex: 1; 
-  }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; min-width: 0; }
 
-  button { 
-    margin-top: 16px; 
-    padding: 10px 18px; 
-    border: 0; 
-    border-radius: 6px; 
-    background: #2563eb; 
-    color: #fff; 
-    font-size: 15px; 
-    cursor: pointer; 
+  button {
+    margin-top: 16px;
+    min-height: 46px;
+    padding: 10px 20px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
   }
+  button:disabled { opacity: .6; cursor: wait; }
 
-  button:disabled { 
-    opacity: .6; 
-    cursor: wait; 
-  }
-
-  button.copy { 
-    margin: 0 0 0 8px; 
-    padding: 6px 12px; 
-    font-size: 13px; 
+  button.copy {
+    margin: 10px 0 0 0;
+    min-height: 40px;
+    padding: 6px 14px;
+    font-size: 14px;
     background: #374151;
-   }
-
-  .msg { 
-    margin-top: 14px; 
-    padding: 10px; 
-    border-radius: 6px; 
-    font-size: 14px; 
-    display: none; 
-    word-break: break-all;
-   }
-
-
-  .ok { 
-    background: #e7f8ee; 
-    color: #14532d;
+    display: block;
   }
 
-
-  .err { 
-    background: #fde8e8; 
-    color: #7f1d1d; 
+  .msg {
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 15px;
+    display: none;
+    overflow-wrap: anywhere;
   }
+  .ok  { background: var(--ok-bg);  color: var(--ok-text); }
+  .err { background: var(--err-bg); color: var(--err-text); }
 
+  a { color: var(--primary); }
 
-  a { 
-    color: #2563eb; 
-  }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  td, th { text-align: left; padding: 8px 4px; border-bottom: 1px solid var(--line); font-size: 15px; }
 
+  footer { color: var(--muted); font-size: 13px; text-align: center; margin-top: 28px; }
 
-  table 
-  { 
-    width: 100%; 
-    border-collapse: collapse; 
-    margin-top: 8px; 
-  }
-
-  td, th { 
-    text-align: left; 
-    padding: 6px 4px; 
-    border-bottom: 1px solid #eee; 
-    font-size: 14px; 
-  }
-  
-  footer { 
-    color: #777; 
-    font-size: 13px; 
-    text-align: center; 
-    margin-top: 30px; 
+  /* Phones */
+  @media (max-width: 520px) {
+    body { padding: 16px 12px; }
+    h1 { font-size: 1.35rem; }
+    .card { padding: 14px; }
+    .row { flex-direction: column; gap: 0; }
+    button { width: 100%; }
+    button.copy { width: auto; }
   }
 </style>
 </head>
@@ -137,15 +134,15 @@
   <div class="card">
     <h3>Shorten a link</h3>
     <label for="longUrl">Long URL</label>
-    <input id="longUrl" placeholder="https://example.com/very/long/link">
+    <input id="longUrl" type="url" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="https://example.com/very/long/link">
     <div class="row">
       <div>
         <label for="alias">Custom alias (optional)</label>
-        <input id="alias" placeholder="my-link">
+        <input id="alias" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="my-link">
       </div>
       <div>
         <label for="days">Expires in days (optional)</label>
-        <input id="days" type="number" min="1" max="365" placeholder="7">
+        <input id="days" type="number" inputmode="numeric" min="1" max="365" placeholder="7">
       </div>
     </div>
     <button id="shortenBtn">Shorten</button>
@@ -155,7 +152,7 @@
   <div class="card">
     <h3>Click statistics</h3>
     <label for="statsCode">Short code</label>
-    <input id="statsCode" placeholder="my-link">
+    <input id="statsCode" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="my-link">
     <button id="statsBtn">Get stats</button>
     <div id="statsMsg" class="msg"></div>
     <div id="statsOut"></div>
