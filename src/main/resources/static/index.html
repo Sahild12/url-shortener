@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URL Shortener</title>
+<style>
+
+  body { 
+    font-family: system-ui,
+    Arial, sans-serif; 
+    max-width: 640px; 
+    margin: 40px auto;
+    padding: 0 16px;
+    color: #1a1a1a; 
+    background: #f6f7f9; 
+  }
+
+
+  h1 { 
+    margin-bottom: 4px; 
+  }
+  
+  .sub { 
+    color: #555; 
+    margin-top: 0; 
+  }
+  
+  .card { 
+    background: #fff; 
+    border-radius: 10px; 
+    padding: 20px; 
+    margin: 20px 0; 
+    box-shadow: 0 1px 4px rgba(0,0,0,.1); 
+  }
+
+  label { 
+    display: block; 
+    font-size: 14px; 
+    margin: 12px 0 4px; 
+  }
+
+  input { 
+    width: 100%; 
+    padding: 10px; 
+    border: 1px solid #ccc; 
+    border-radius: 6px; 
+    font-size: 15px; 
+    box-sizing: border-box; 
+  }
+
+  .row { 
+    display: flex; 
+    gap: 12px; 
+  }
+
+  .row > div { 
+    flex: 1; 
+  }
+
+  button { 
+    margin-top: 16px; 
+    padding: 10px 18px; 
+    border: 0; 
+    border-radius: 6px; 
+    background: #2563eb; 
+    color: #fff; 
+    font-size: 15px; 
+    cursor: pointer; 
+  }
+
+  button:disabled { 
+    opacity: .6; 
+    cursor: wait; 
+  }
+
+  button.copy { 
+    margin: 0 0 0 8px; 
+    padding: 6px 12px; 
+    font-size: 13px; 
+    background: #374151;
+   }
+
+  .msg { 
+    margin-top: 14px; 
+    padding: 10px; 
+    border-radius: 6px; 
+    font-size: 14px; 
+    display: none; 
+    word-break: break-all;
+   }
+
+
+  .ok { 
+    background: #e7f8ee; 
+    color: #14532d;
+  }
+
+
+  .err { 
+    background: #fde8e8; 
+    color: #7f1d1d; 
+  }
+
+
+  a { 
+    color: #2563eb; 
+  }
+
+
+  table 
+  { 
+    width: 100%; 
+    border-collapse: collapse; 
+    margin-top: 8px; 
+  }
+
+  td, th { 
+    text-align: left; 
+    padding: 6px 4px; 
+    border-bottom: 1px solid #eee; 
+    font-size: 14px; 
+  }
+  
+  footer { 
+    color: #777; 
+    font-size: 13px; 
+    text-align: center; 
+    margin-top: 30px; 
+  }
+</style>
+</head>
+<body>
+  <h1>URL Shortener</h1>
+  <p class="sub">Spring Boot, MySQL/Postgres, Redis cache, async click analytics, rate limiting.</p>
+
+  <div class="card">
+    <h3>Shorten a link</h3>
+    <label for="longUrl">Long URL</label>
+    <input id="longUrl" placeholder="https://example.com/very/long/link">
+    <div class="row">
+      <div>
+        <label for="alias">Custom alias (optional)</label>
+        <input id="alias" placeholder="my-link">
+      </div>
+      <div>
+        <label for="days">Expires in days (optional)</label>
+        <input id="days" type="number" min="1" max="365" placeholder="7">
+      </div>
+    </div>
+    <button id="shortenBtn">Shorten</button>
+    <div id="createMsg" class="msg"></div>
+  </div>
+
+  <div class="card">
+    <h3>Click statistics</h3>
+    <label for="statsCode">Short code</label>
+    <input id="statsCode" placeholder="my-link">
+    <button id="statsBtn">Get stats</button>
+    <div id="statsMsg" class="msg"></div>
+    <div id="statsOut"></div>
+  </div>
+
+  <footer>Free hosting: the first request after a quiet period can take about a minute to wake up.</footer>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  function showMsg(el, text, ok) {
+    el.className = 'msg ' + (ok ? 'ok' : 'err');
+    el.textContent = text;
+    el.style.display = 'block';
+  }
+
+  async function readJson(res) {
+    try { return await res.json(); } catch (e) { return {}; }
+  }
+
+  $('shortenBtn').addEventListener('click', async () => {
+    const btn = $('shortenBtn');
+    const msg = $('createMsg');
+    const body = { longUrl: $('longUrl').value.trim() };
+    const alias = $('alias').value.trim();
+    const days = $('days').value.trim();
+    if (alias) body.customAlias = alias;
+    if (days) body.expiryDays = Number(days);
+
+    btn.disabled = true;
+    msg.style.display = 'none';
+    try {
+      const res = await fetch('/api/urls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await readJson(res);
+      if (!res.ok) {
+        showMsg(msg, data.error || ('Something went wrong (status ' + res.status + ')'), false);
+        return;
+      }
+      msg.className = 'msg ok';
+      msg.textContent = 'Your short link: ';
+      const link = document.createElement('a');
+      link.href = data.shortUrl;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = data.shortUrl;
+      msg.appendChild(link);
+      const copy = document.createElement('button');
+      copy.className = 'copy';
+      copy.textContent = 'Copy';
+      copy.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(data.shortUrl); copy.textContent = 'Copied'; }
+        catch (e) { copy.textContent = 'Copy failed'; }
+      });
+      msg.appendChild(copy);
+      msg.style.display = 'block';
+      $('statsCode').value = data.shortCode;
+    } catch (e) {
+      showMsg(msg, 'Could not reach the server. Try again in a moment.', false);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  $('statsBtn').addEventListener('click', async () => {
+    const msg = $('statsMsg');
+    const out = $('statsOut');
+    const code = $('statsCode').value.trim();
+    out.textContent = '';
+    msg.style.display = 'none';
+    if (!code) { showMsg(msg, 'Enter a short code first.', false); return; }
+    try {
+      const res = await fetch('/api/urls/' + encodeURIComponent(code) + '/stats');
+      const data = await readJson(res);
+      if (!res.ok) {
+        showMsg(msg, data.error || ('Something went wrong (status ' + res.status + ')'), false);
+        return;
+      }
+      const total = document.createElement('p');
+      total.textContent = 'Total clicks: ' + data.totalClicks;
+      out.appendChild(total);
+      out.appendChild(makeTable('Browser', data.byBrowser));
+      out.appendChild(makeTable('Device', data.byDevice));
+    } catch (e) {
+      showMsg(msg, 'Could not reach the server. Try again in a moment.', false);
+    }
+  });
+
+  function makeTable(title, map) {
+    const table = document.createElement('table');
+    const head = table.insertRow();
+    const th1 = document.createElement('th'); th1.textContent = title;
+    const th2 = document.createElement('th'); th2.textContent = 'Clicks';
+    head.appendChild(th1); head.appendChild(th2);
+    const entries = Object.entries(map || {});
+    if (entries.length === 0) {
+      const row = table.insertRow();
+      const cell = row.insertCell();
+      cell.colSpan = 2;
+      cell.textContent = 'No clicks yet';
+    }
+    entries.forEach(([k, v]) => {
+      const row = table.insertRow();
+      row.insertCell().textContent = k;
+      row.insertCell().textContent = v;
+    });
+    return table;
+  }
+</script>
+</body>
+</html>
